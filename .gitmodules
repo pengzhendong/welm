@@ -1,0 +1,3 @@
+[submodule "srilm"]
+	path = srilm
+	url = https://github.com/BitSpeech/SRILM.git
