@@ -12,7 +12,6 @@ endif()
 if(NOT DEFINED FST_INSTALL_DIR)
   list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
   include(ExternalProject)
-  include(FetchContent)
   include(openfst)
 else()
   include_directories(${FST_INSTALL_DIR}/include)
@@ -30,7 +29,7 @@ add_library(utils
   util/text-utils.cc
 )
 
-if(NOT DEFINED FST_INSTALL_DIR AND NOT MSVC)
+if(NOT DEFINED FST_INSTALL_DIR)
   add_dependencies(utils openfst)
 endif()
 

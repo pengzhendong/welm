@@ -1,7 +1,5 @@
 #!/bin/bash
 
-. ./path.sh || exit 1;
-
 stage=0
 stop_stage=4
 
@@ -18,6 +16,7 @@ mkdir -p $dir
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   pip install -r requirements.txt
   if [ ! -d srilm/bin ]; then
+    git submodule update --init
     make -C srilm SRILM=$(realpath srilm)
   fi
   if [ ! -d kaldi/build ]; then
