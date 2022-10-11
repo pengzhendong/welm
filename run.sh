@@ -3,7 +3,11 @@
 stage=0
 stop_stage=4
 
+use_bpe=false
+
 unit_file=
+bpe_model=
+
 text=
 normalize=true
 contains_utt=true
@@ -12,6 +16,11 @@ dir=exp
 . tools/parse_options.sh || exit 1;
 
 mkdir -p $dir
+
+if [ $contains_utt == true ]; then
+  cut -f2- -d " " $text > $dir/text
+  text=$dir/text
+fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   pip install -r requirements.txt
@@ -24,10 +33,33 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     cmake --build kaldi/build
   fi
 fi
+. path.sh || exit 1;
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+  if [ $use_bpe == true ] && [ ! $bpe_model ]; then
+    echo "WARING: It's not recommended to train the bpe model here."
+    echo "Please use the pretrained bpe model which generate the unit file."
+    mkdir $dir/bpe
+    nbpe=5000
+    bpemode=unigram
+    model_prefix=$dir/bpe/$bpemode$nbpe
+    
+    python tools/spm_train.py \
+      --input=$text \
+      --vocab_size=$nbpe \
+      --model_type=$bpemode \
+      --model_prefix=$model_prefix \
+      --input_sentence_size=100000000
+    bpe_model=$model_prefix.model
+  fi
+
   mkdir -p $dir/dict
-  python tools/prepare_dict.py $unit_file data/lexicon.txt $dir/dict/lexicon.txt
+  cat data/*_lexicon.txt > $dir/lexicon.txt
+  python tools/prepare_dict.py \
+    $unit_file \
+    $dir/lexicon.txt \
+    $dir/dict/lexicon.txt \
+    $bpe_model
   awk '{print $1,99}' $dir/dict/lexicon.txt > $dir/word_seg_vocab.txt
 fi
 
@@ -36,9 +68,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   python tools/word_segmentation.py \
     --trans $text \
     --normalize $normalize \
-    --contains_utt $contains_utt \
     --vocab $dir/word_seg_vocab.txt \
-    --segmented_trans $dir/text \
     --clean_segmented_trans $dir/text.no_oov
 fi
 

@@ -20,13 +20,11 @@ from tn.chinese.normalizer import Normalizer
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--trans', help='input transcript')
-    parser.add_argument('--normalize', type=bool, default=False,
+    parser.add_argument('--normalize',
+                        type=bool,
+                        default=False,
                         help='whether to normalize the text')
-    parser.add_argument('--contains_utt', type=bool, default=False,
-                        help='whether the first column is utterance id')
     parser.add_argument('--vocab', help='input vocab file')
-    parser.add_argument('--segmented_trans',
-                        help='output segmented transcript')
     parser.add_argument('--clean_segmented_trans',
                         help='output segmented transcript without oov')
     args = parser.parse_args()
@@ -41,30 +39,24 @@ def main():
 
     jieba.set_dictionary(args.vocab)
     with open(args.trans) as trans, \
-            open(args.segmented_trans, 'w') as segmented_trans, \
             open(args.clean_segmented_trans, 'w') as clean_segmented_trans:
         for line in trans:
-            line = line.strip()
-
-            if args.contains_utt:
-                arr = line.split()
-                if len(arr) < 2:
-                    continue
-                text = arr[1]
-            else:
-                text = line
-
+            text = line.strip().upper()
             if args.normalize:
                 text = normalizer.normalize(text)
-
             if len(text) == 0:
                 continue
 
             words = list(jieba.cut(text, HMM=False))
-            segmented_trans.write(' '.join(words) + '\n')
-
-            words = [word if word in vocabs else '<SPOKEN_NOISE>' for word in words]
-            clean_segmented_trans.write(' '.join(words) + '\n')
+            clean_words = []
+            for word in words:
+                if word == ' ':
+                    continue
+                if word in vocabs:
+                    clean_words.append(word)
+                else:
+                    clean_words.append('<SPOKEN_NOISE>')
+            clean_segmented_trans.write(' '.join(clean_words) + '\n')
 
 
 if __name__ == '__main__':

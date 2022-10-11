@@ -32,33 +32,27 @@ lexicon_table = set()
 with open(sys.argv[2], 'r', encoding='utf8') as fin, \
         open(sys.argv[3], 'w', encoding='utf8') as fout:
     for line in fin:
-        word = line.split()[0]
+        word = line.strip()
         if word == 'SIL' and not bpemode:  # `sil` might be a valid piece in bpemodel
             continue
-        elif word == '<SPOKEN_NOISE>':
+        # each word only has one pronunciation for e2e system
+        if word == '<SPOKEN_NOISE>' or word in lexicon_table:
             continue
-        else:
-            # each word only has one pronunciation for e2e system
-            if word in lexicon_table:
-                continue
-            if bpemode:
+
+        if bpemode:
+            if word.encode('utf8').isalpha():
                 pieces = sp.EncodeAsPieces(word)
-                if contains_oov(pieces):
-                    print('Ignoring words {}, which contains oov unit'.format(
-                        ''.join(word).strip('▁')))
-                    continue
-                chars = ' '.join(
-                    [p if p in unit_table else '<unk>' for p in pieces])
             else:
-                # ignore words with OOV
-                if contains_oov(word):
-                    print('Ignoring words {}, which contains oov unit'.format(
-                        word))
-                    continue
-                # Optional, append ▁ in front of english word
-                # we assume the model unit of our e2e system is char now.
-                if word.encode('utf8').isalpha() and '▁' in unit_table:
-                    word = '▁' + word
-                chars = ' '.join(word)  # word is a char list
-            fout.write('{} {}\n'.format(word, chars))
-            lexicon_table.add(word)
+                pieces = word
+        else:
+            # Optional, append ▁ in front of english word
+            # we assume the model unit of our e2e system is char now.
+            if word.encode('utf8').isalpha() and '▁' in unit_table:
+                word = '▁' + word
+            pieces = word  # word is a char list
+
+        if contains_oov(pieces):
+            print('Word {} contains oov unit, ignoring.'.format(word))
+            continue
+        fout.write('{} {}\n'.format(word, ' '.join(pieces)))
+        lexicon_table.add(word)
